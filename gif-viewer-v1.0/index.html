@@ -1,0 +1,139 @@
+<!--
+# Gif Viewer
+# Creator: vbookshelf
+# GitHub: https://github.com/vbookshelf/Gif-Viewer
+# License: MIT (You are free to share this app with others.)
+# Version: 1.0
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GIF Viewer</title>
+<style>
+  :root {
+    --bg: #f2f2f0;
+    --fg: #222;
+    --muted: #777;
+    --line: #bdbdb8;
+    --accent: #333;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #17171a;
+      --fg: #e8e8e6;
+      --muted: #8a8a90;
+      --line: #46464c;
+      --accent: #c8c8c8;
+      color-scheme: dark;
+    }
+  }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font: 15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: auto;
+  }
+  #drop {
+    border: 2px dashed var(--line);
+    border-radius: 6px;
+    padding: 48px 56px;
+    color: var(--muted);
+    text-align: center;
+    cursor: pointer;
+    max-width: 80vw;
+  }
+  body.over #drop { border-color: var(--accent); color: var(--accent); }
+  #stage { position: relative; display: none; line-height: 0; margin: 24px 24px 80px; }
+  #stage img { display: block; width: 100%; height: auto; user-select: none; -webkit-user-drag: none; }
+  #bar {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    display: flex; align-items: center; gap: 12px;
+    width: min(52vw, 360px);
+  }
+  #slider { flex: 1; min-width: 0; accent-color: var(--accent); cursor: pointer; }
+  #bar[hidden] { display: none; }
+  input[type=file] { display: none; }
+</style>
+</head>
+<body>
+  <div id="drop" role="button" tabindex="0">Drop a GIF here, or click to choose one</div>
+  <div id="stage">
+    <img id="img" alt="">
+  </div>
+  <div id="bar" hidden>
+    <input type="range" id="slider" min="40" max="800" value="400" aria-label="Image width">
+  </div>
+  <input type="file" id="file" accept="image/gif">
+
+<script>
+(function () {
+  var drop = document.getElementById('drop');
+  var stage = document.getElementById('stage');
+  var img = document.getElementById('img');
+  var file = document.getElementById('file');
+  var bar = document.getElementById('bar');
+  var slider = document.getElementById('slider');
+  var url = null;
+  var ratio = 1;
+
+  function show(f) {
+    if (!f || f.type !== 'image/gif') {
+      drop.textContent = 'That file isn’t a GIF. Drop a .gif file instead.';
+      return;
+    }
+    if (url) URL.revokeObjectURL(url);
+    url = URL.createObjectURL(f);
+    img.onload = function () {
+      ratio = img.naturalWidth / img.naturalHeight;
+      var maxW = Math.max(120, window.innerWidth - 80);
+      var maxH = Math.max(120, window.innerHeight - 100);
+      var w = Math.min(img.naturalWidth, maxW, maxH * ratio);
+      slider.max = Math.round(Math.max(img.naturalWidth * 2, window.innerWidth));
+      setWidth(w);
+      drop.style.display = 'none';
+      stage.style.display = 'block';
+      bar.hidden = false;
+    };
+    img.src = url;
+    img.alt = f.name;
+  }
+
+  function setWidth(w) {
+    w = Math.max(40, Math.round(w));
+    if (w > +slider.max) slider.max = w;
+    slider.value = w;
+    stage.style.width = w + 'px';
+  }
+
+  // Slider resize
+  slider.addEventListener('input', function () { setWidth(+slider.value); });
+
+  // Loading: drop anywhere, or pick a file
+  ['dragenter', 'dragover'].forEach(function (t) {
+    window.addEventListener(t, function (e) { e.preventDefault(); document.body.classList.add('over'); });
+  });
+  ['dragleave', 'drop'].forEach(function (t) {
+    window.addEventListener(t, function (e) { e.preventDefault(); document.body.classList.remove('over'); });
+  });
+  window.addEventListener('drop', function (e) { show(e.dataTransfer.files[0]); });
+
+  function pick() { file.click(); }
+  drop.addEventListener('click', pick);
+  drop.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+  file.addEventListener('change', function () { show(file.files[0]); file.value = ''; });
+})();
+</script>
+</body>
+</html>
